@@ -1,45 +1,15 @@
 var express = require('express')
-/////start
-// const app = express();
-
-// app.use(express.json());
-// app.use(express.urlencoded({
-//       extended:true
-// }))
-// const productData = []
-// app.listen(2000, function () {
-//   console.log('Connected to Server at 2000');
-// })
-
-// app.post("/api/add_product",  (req, res) =>{
-
-//    console.log("Result",req.body);
-//    const pdata = {
-//        "id": productData.length+1,
-//        "pname": req.body.pname,
-//        "pphone": req.body.pphone,
-//        "pemail":req.body.pemail
-
-//    };
-
-//    productData.push(pdata);
-//    console.log("Final",pdata);
-
-//    req.status(200).send({
-//     "status_code": 200,
-//     "message":"Product added successfully",
-//     "product": pdata
-//    })
-
-
-// })
-
-// //End test
 var cors = require('cors')
 var bodyParser = require('body-parser')
 var jsonParser = bodyParser.json()
 var app = express()
-
+//hash
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
+//token
+var jwt = require('jsonwebtoken');
+const secret = 'login-2023'
+// var token = jwt.sign({ foo: 'bar' }, 'shhhhh');
 
 
 app.use(cors())
@@ -52,7 +22,7 @@ const connection = mysql.createConnection({
   });
 
 app.post('/register', jsonParser,function (req, res, next) {
-  const attendeeid = 1
+    const attendeeid = 1
     connection.execute(//INSERT INTO + table in db name
         'INSERT INTO user_insystem(user_username,user_password,user_Fname,user_Lname,user_phone,user_email,user_ishost,user_faceimagefile,attendee_id) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [   
@@ -74,8 +44,42 @@ app.post('/register', jsonParser,function (req, res, next) {
           res.json({status : 'ok'})
         }
       );
+
+  
   
 })
+//use token here
+app.post('/login', jsonParser, function (req, res, next) {
+  if (req.body.user_email === undefined || req.body.user_password === undefined) {
+    res.json({ status: "error", message: "Missing user_email or user_password" });
+    return;
+  }
+
+  console.log('Received request with user_email:', req.body.user_email);
+
+  connection.execute(
+    'SELECT * FROM user_insystem WHERE user_email=? AND user_password=?', // เปรียบเทียบรหัสผ่านแบบไม่เข้ารหัส
+    [req.body.user_email, req.body.user_password],
+    function(err, user_insystem, fields) {
+      if (err) {
+        console.log('Error while querying the database:', err);
+        res.json({ status: "error", message: err });
+        return;
+      }
+      console.log('user_insystem:', user_insystem);
+
+      if (user_insystem.length === 0) {
+        console.log('No users found in the database or passwords do not match.');
+        res.json({ status: "error", message: 'No users found or passwords do not match' });
+        return;
+      }
+
+      console.log('Login successful.');
+      res.json({ status: 'ok', message: 'Login success' });
+    }
+  );
+});
+
 
 
 app.post('/reservations', jsonParser, function (req, res, next) {
@@ -113,6 +117,8 @@ app.listen(3333, function () {
   console.log('localhost:3333 + /pathname')
 })
 
+
+
 // ..........................................
 // const express =require('express');
 // const {Server} =require('ws')
@@ -125,3 +131,42 @@ app.listen(3333, function () {
 //    ws.on('close', () => console.log('Client Disconnected'));
 
 // })
+//................................................
+
+
+/////start
+// const app = express();
+
+// app.use(express.json());
+// app.use(express.urlencoded({
+//       extended:true
+// }))
+// const productData = []
+// app.listen(2000, function () {
+//   console.log('Connected to Server at 2000');
+// })
+
+// app.post("/api/add_product",  (req, res) =>{
+
+//    console.log("Result",req.body);
+//    const pdata = {
+//        "id": productData.length+1,
+//        "pname": req.body.pname,
+//        "pphone": req.body.pphone,
+//        "pemail":req.body.pemail
+
+//    };
+
+//    productData.push(pdata);
+//    console.log("Final",pdata);
+
+//    req.status(200).send({
+//     "status_code": 200,
+//     "message":"Product added successfully",
+//     "product": pdata
+//    })
+
+
+// })
+
+// //End test
