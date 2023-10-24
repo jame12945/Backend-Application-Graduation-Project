@@ -24,66 +24,6 @@ const connection = mysql.createConnection({
 
 
 
-// app.post('/register', jsonParser, function (req, res, next) {
-//   bcrypt.hash(req.body.user_password, saltRounds, function(err, hash) {
-//     // Store hash in your password DB.
-//     const attendeeid = 2
-//     connection.execute(
-//       'INSERT INTO user_insystem(user_username,user_password,user_fname,user_lname,user_phone,user_email,user_ishost,user_faceimagefile,attendee_id) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-//       [    req.body.user_username,
-//            hash, 
-//            req.body.user_fname,
-//            req.body.user_lname,
-//            req.body.user_phone,
-//            req.body.user_email,
-//            req.body.user_ishost,
-//            req.body.user_faceimagefile,
-//            attendeeid],
-//       function (err, results, fields) {
-//        if (err) {
-//                res.json({status : 'error', message: err})
-//                return
-//        }
-     
-//        res.json({status: 'ok'})
-//       }
-// );
-// });
-       
-     
-// })
-
-
-// app.post('/login', jsonParser, function (req, res, next) {
-//   connection.execute(
-//     'SELECT * FROM user_insystem WHERE user_email =?',
-//     [req.body.user_email],
-//     function (err, user_insystem, fields) {
-//      if (err) {
-//              res.json({status : 'error', message: err});
-//              return
-//      }
-//      if(user_insystem.length==0){
-//       res.json({status : 'error', message: 'no user found'});
-//       return
-//      }
-//      bcrypt.compare(req.body.user_password,user_insystem[0].user_password, function(err, isLogin) {
-//       // result == true
-//       if(isLogin){
-//         res.json({status : 'ok', message: 'login success'})
-//       }
-//       else{
-//         res.json({status : 'error', message: 'login failed'});
-//       }
-//   });
-   
-
-//     }
-// );
-// })
-
-
-
 // checkEmailError-----------------------------------------------------------------------------------------------------------
 const checkEmailError = (req, res, results) => {
   if (results.length > 0) {
@@ -274,37 +214,82 @@ app.put('/newPassword', jsonParser, function (req, res) {
 // NewPassword-------------------------------------------------------------------------------------------------------------------
 //reserve------------------------------------------------------------------------------------------------------------------
 app.post('/reserveroom', jsonParser, function (req, res) {
-  try {
-    // const token = req.headers.authorization.split(' ')[1]; // ดึง Token จากส่วนหัว Authorization
+  try{
+    
     const decode = jwt.verify(req.body.token, secret);
-    const { username, user_id } = decode; // ดึง user_id จาก Token
-
-    if (username && user_id) { // ตรวจสอบว่า Token ถูกต้องและมี user_id
+    const {username, user_id} = decode;
+    if(username && user_id) {
       const startTime = req.body.start_time;
       const endTime = req.body.end_time;
+      const dateReserve =req.body.date_reservation;
+      const createReserve = dateReserve;
+      const updateReserve = req.body.update_reservlog;
       connection.execute(
-        'INSERT INTO reservation (start_time, end_time, user_id) VALUES (?, ?, ?)',
-        [startTime, endTime, user_id],
-        function (err, results, fields) {
-          if (err) {
-            res.json({ status: 'error', message: err });
-          } else {
-            res.json({ status: 'ok', message: 'Room reserved successfully' });
-          }
-        }
-      );
-    } else {
-      res.json({ status: 'error', message: 'Unauthorized' });
+             'INSERT INTO reservation (start_time, end_time, user_id, date_reservation,create_reservlog,update_reservlog) VALUES (?, ?, ?, ?, ?, ?)',
+             [startTime, endTime, user_id, dateReserve,createReserve,updateReserve],
+              function(err,results,fields){
+
+                    if(err){
+                      res.json({status: 'error' , message:"Cannot Reserve"});
+                    }
+                    else{
+                      res.json({status: 'ok',message:'Reserved successfully!!'})
+                    }
+
+              }
+             );
     }
-  } catch (err) {
-    res.json({ status: 'error', message: err.message });
+
+  }
+  catch(err){
+    res.json({ status: 'error', message: err.message })
+  }
+  
+});
+
+//reserve------------------------------------------------------------------------------------------------------------------
+//roomdetail---------------------------------------------------------------------------------------------------------------
+app.post('/roomdetail',jsonParser, (req, res) => {
+  const roomNum = req.body.room_num;
+  const statusRoom = req.body.status_room;
+  if (roomNum && statusRoom) {
+    connection.execute(
+      'INSERT INTO roomdetail (room_num,status_room) VALUES (?, ?)',
+      [roomNum,statusRoom],
+      function (err, results) {
+        if (err) {
+          return res.json({ status: 'error', message: err });
+        }
+        return res.json({ status: 'ok' });
+      }
+    );
+  } else {
+    return res.json({ status: 'error', message: 'Invalid input data' });
+  }
+});
+
+app.put('/roomdetail/:roomdetail_id', jsonParser, (req, res) => {
+  const roomDetailId = req.params.roomdetail_id;
+  const statusRoom = req.body.status_room;
+  const roomNumber = req.body.room_num;
+  if (roomDetailId && statusRoom && roomNumber) {
+    connection.execute(
+      'UPDATE roomdetail SET status_room = ? ,  room_num = ? WHERE roomdetail_id = ?',
+      [statusRoom, roomNumber,roomDetailId],
+      function (err, results) {
+        if (err) {
+          return res.json({ status: 'error', message: err });
+        }
+        return res.json({ status: 'ok' });
+      }
+    );
+  } else {
+    return res.json({ status: 'error', message: 'Invalid input data' });
   }
 });
 
 
-
-//reserve------------------------------------------------------------------------------------------------------------------
-
+//roomdetail---------------------------------------------------------------------------------------------------------------
 app.listen(3333, function () {
     console.log('CORS-enabled web server listening on port 3333')
 })
