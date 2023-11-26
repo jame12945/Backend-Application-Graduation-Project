@@ -305,7 +305,7 @@ function getReservationsForRoomAndDate(roomDetail, dateReserve, startTime, endTi
 }
 // Reservation-------------------------------------------------------------------------------------------------------------------
 // ReservationApplication-------------------------------------------------------------------------------------------------------------------
-// การจองในแอปพลิเคชัน ----------------------------------------------------------------------------------------------
+
 app.post('/appreserveroom/:roomdetail_id', jsonParser, async function (req, res) {
     try {
         const roomDetail = req.params.roomdetail_id;
@@ -314,13 +314,13 @@ app.post('/appreserveroom/:roomdetail_id', jsonParser, async function (req, res)
         const endTime = req.body.end_time;
         const dateReserve = req.body.date_reservation;
         const updateReserve = req.body.update_reservlog;
-
+        
         const roomDetailData = await getRoomDetail(roomDetail);
         const roomIsAvailable = await isRoomAvailable(roomDetail, dateReserve, startTime, endTime);
 
         if (roomIsAvailable) {
             if (roomDetailData) {
-                await addReservation(startTime, endTime, null, dateReserve, null, updateReserve, roomDetail); // ไม่ต้องการ user_id
+                await addReservation(startTime, endTime, null, dateReserve, dateReserve, updateReserve, roomDetail); // ไม่ต้องการ user_id
                 res.json({ status: 'ok', message: 'จองห้องเรียบร้อยแล้ว' });
             } else {
                 res.json({ status: 'error', message: 'ไม่พบรายละเอียดห้อง' });
@@ -420,6 +420,7 @@ async function updateReservationUserId(reservationId, userUsername) {
                         reject(err);
                     } else {
                         resolve(results);
+                        console.log(results);
                     }
                 }
             );
@@ -463,10 +464,28 @@ app.get('/getLastreservations', function (req, res) {
         res.json({ status: 'error', message: err.message });
     }
 });
+app.delete('/deleteLastReservation', function (req, res) {
+    try {
+        connection.execute(
+            'DELETE FROM reservation ORDER BY reservation_id DESC LIMIT 1',
+            function (err, results) {
+                if (err) {
+                    res.json({ status: 'error', message: err });
+                    return;
+                }
+
+                res.json({ status: 'ok', message: 'Reservation deleted successfully' });
+                return;
+            }
+        );
+    } catch (err) {
+        res.json({ status: 'error', message: err.message });
+    }
+});
 
 
 // ReservationApplication-------------------------------------------------------------------------------------------------------------------
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // ฟังก์ชันสำหรับดึงข้อมูล user_username จากตาราง user_insystem โดยใช้ name
 const getUserInfoByName = (name) => {
     return new Promise((resolve, reject) => {
@@ -481,25 +500,7 @@ const getUserInfoByName = (name) => {
     });
   };
   
-//   // รับ request จาก frontend
-//   app.post('/get_username', async (req, res) => {
-//     try {
-//         const { name } = req.body;
 
-//         // เรียกใช้ฟังก์ชันเพื่อดึงข้อมูล user_info
-//         const userInfo = await getUserInfoByName(name);
-
-//         if (userInfo) {
-//             res.json({ status: 'success', user_info: userInfo });
-//             console.log(userInfo);
-//         } else {
-//             res.json({ status: 'error', message: 'User not found' });
-//         }
-//     } catch (error) {
-//         res.json({ status: 'error', message: error.message });
-//     }
-//   });
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Get Room URL-------------------------------------------------------------------------------------------------------------------
 app.get('/room/:room_id', async function (req, res) {
     try {
