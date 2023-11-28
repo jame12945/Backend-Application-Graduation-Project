@@ -262,22 +262,7 @@ function getRoomDetail(roomDetail) {
         });
     });
 }
-// ฟังก์ชันสำหรับเพิ่มการจองแบบ asynchronous
-function addReservation(startTime, endTime, user_id, dateReserve, createReserve, updateReserve, roomDetail) {
-    return new Promise((resolve, reject) => {
-        connection.execute(
-            'INSERT INTO reservation (start_time, end_time, user_id, date_reservation, create_reservlog, update_reservlog, roomdetail_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [startTime, endTime, user_id, dateReserve, createReserve, updateReserve, roomDetail],
-            (err, results, fields) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(results);
-                }
-            }
-        );
-    });
-}
+
 // ฟังก์ชันสำหรับตรวจสอบว่าห้องว่างหรือไม่
 async function isRoomAvailable(roomDetail, dateReserve, startTime, endTime) {
     // ดึงข้อมูลการจองสำหรับห้องและช่วงเวลาที่กำหนด
@@ -314,13 +299,15 @@ app.post('/appreserveroom/:roomdetail_id', jsonParser, async function (req, res)
         const endTime = req.body.end_time;
         const dateReserve = req.body.date_reservation;
         const updateReserve = req.body.update_reservlog;
-        
+        //add
+        const attendeesEmailData =  JSON.stringify(req.body.attendee_email);
         const roomDetailData = await getRoomDetail(roomDetail);
         const roomIsAvailable = await isRoomAvailable(roomDetail, dateReserve, startTime, endTime);
-
+        //add log
+        console.log('body from flutter = '+ JSON.stringify(req.body));
         if (roomIsAvailable) {
             if (roomDetailData) {
-                await addReservation(startTime, endTime, null, dateReserve, dateReserve, updateReserve, roomDetail); // ไม่ต้องการ user_id
+                await addReservation(startTime, endTime, null, dateReserve, dateReserve, updateReserve, roomDetail, attendeesEmailData); 
                 res.json({ status: 'ok', message: 'จองห้องเรียบร้อยแล้ว' });
             } else {
                 res.json({ status: 'error', message: 'ไม่พบรายละเอียดห้อง' });
@@ -333,6 +320,22 @@ app.post('/appreserveroom/:roomdetail_id', jsonParser, async function (req, res)
         res.json({ status: 'error', message: err.message });
     }
 });
+// ฟังก์ชันสำหรัการจองบน application
+function addReservation(startTime, endTime, user_id, dateReserve, createReserve, updateReserve, roomDetail , attendeesEmailData) {
+    return new Promise((resolve, reject) => {
+        connection.execute(
+            'INSERT INTO reservation (start_time, end_time, user_id, date_reservation, create_reservlog, update_reservlog, roomdetail_id, attendee_email) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [startTime, endTime, user_id, dateReserve, createReserve, updateReserve, roomDetail, attendeesEmailData],
+            (err, results, fields) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(results);
+                }
+            }
+        );
+    });
+}
 // การจองในแอปพลิเคชัน ----------------------------------------------------------------------------------------------
 app.post('/faceRecognition', jsonParser, async function (req, res) {
     try {
@@ -349,7 +352,7 @@ app.post('/faceRecognition', jsonParser, async function (req, res) {
             console.log('userUsername: ' + userInSystemData.user_id);
             // Update user_id in the most recent reservation
             const latestReservation = await getLatestReservationWithNullUserId();
-            console.log(latestReservation);
+          
 
             if (latestReservation) {
                 await updateReservationUserId(latestReservation.reservation_id, userUsername);
