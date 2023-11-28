@@ -420,7 +420,7 @@ async function updateReservationUserId(reservationId, userUsername) {
                         reject(err);
                     } else {
                         resolve(results);
-                        console.log(results);
+                     
                     }
                 }
             );
@@ -482,7 +482,36 @@ app.delete('/deleteLastReservation', function (req, res) {
         res.json({ status: 'error', message: err.message });
     }
 });
+app.get('/selectAttendee',jsonParser, async function (req, res) {
+   try {
+    const all_email = await getAllEmails();
+    console.log(all_email)
+    res.json({ status: 'ok', message: 'all Email' , email: all_email });
 
+   }
+   catch(err) {
+        console.log('ข้อผิดพลาด:', err);
+        res.json({ status: 'error', message: err.message });
+   }
+
+});
+
+async function getAllEmails() {
+    return new Promise((resolve, reject) => {
+        connection.execute(
+            'SELECT user_email FROM user_insystem',
+            [],
+            (err, results, fields) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    const emails = results.map(result => result.user_email);
+                    resolve(emails);
+                }
+            }
+        );
+    });
+}
 
 // ReservationApplication-------------------------------------------------------------------------------------------------------------------
 
