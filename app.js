@@ -485,7 +485,7 @@ app.delete('/deleteLastReservation', function (req, res) {
 app.get('/selectAttendee',jsonParser, async function (req, res) {
    try {
     const all_email = await getAllEmails();
-    console.log(all_email)
+
     res.json({ status: 'ok', message: 'all Email' , email: all_email });
 
    }
@@ -512,7 +512,34 @@ async function getAllEmails() {
         );
     });
 }
-
+function addEmail(email) {
+    return new Promise((resolve, reject) => {
+        connection.execute(
+            'INSERT INTO reservation (attendee_email) VALUES (?)',
+            [email],
+            (err, results, fields) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(results);
+                }
+            }
+        );
+    });
+}
+// app.post('/addEmailAttendee',jsonParser, async function (req, res) {
+//     try{
+//        let getEmail = req.body.attendee_email
+//        console.log('getEmail ='+getEmail)
+//        getEmail = await addEmail(getEmail);
+//        console.log(getEmail)
+//        res.json({ status: 'ok', message: 'all Get Emails' , emails: getEmail });
+//     }
+//     catch(err) {
+//         console.log('ข้อผิดพลาด:', err);
+//         res.json({ status: 'error', message: err.message });
+//     }
+// })
 // ReservationApplication-------------------------------------------------------------------------------------------------------------------
 
 // ฟังก์ชันสำหรับดึงข้อมูล user_username จากตาราง user_insystem โดยใช้ name
@@ -583,34 +610,34 @@ function updateRoomStatus(roomdetail_id, status) {
       }
     });
   }
-  function compareAndUpdateRoomStatus() {
-    connection.query('SELECT roomdetail_id, start_time, end_time, date_reservation FROM reservation', (err, results) => {
-      if (err) {
-        console.error('Failed to fetch reservation data', err);
-        return;
-      }
+//   function compareAndUpdateRoomStatus() {
+//     connection.query('SELECT roomdetail_id, start_time, end_time, date_reservation FROM reservation', (err, results) => {
+//       if (err) {
+//         console.error('Failed to fetch reservation data', err);
+//         return;
+//       }
       
-      results.forEach((result) => {
-        const { roomdetail_id, start_time, end_time, date_reservation } = result;
-        const startTime = moment(start_time, 'HH:mm:ss').format('HH:mm:ss');
-        const datereservationTime = moment(date_reservation, 'YYYY-MM-DD').format('YYYY-MM-DD');
-        const reservationTime = moment(datereservationTime + 'T' + startTime).format('YYYY-MM-DD'+'T'+'HH:mm:ss');
-        const endTime1 = moment(end_time, 'HH:mm:ss').format('HH:mm:ss');
-        const endTime = moment(datereservationTime + 'T' + endTime1).format('YYYY-MM-DD'+'T'+'HH:mm:ss');
+//       results.forEach((result) => {
+//         const { roomdetail_id, start_time, end_time, date_reservation } = result;
+//         const startTime = moment(start_time, 'HH:mm:ss').format('HH:mm:ss');
+//         const datereservationTime = moment(date_reservation, 'YYYY-MM-DD').format('YYYY-MM-DD');
+//         const reservationTime = moment(datereservationTime + 'T' + startTime).format('YYYY-MM-DD'+'T'+'HH:mm:ss');
+//         const endTime1 = moment(end_time, 'HH:mm:ss').format('HH:mm:ss');
+//         const endTime = moment(datereservationTime + 'T' + endTime1).format('YYYY-MM-DD'+'T'+'HH:mm:ss');
   
-        if (nowThailand.format('YYYY-MM-DD'+'T'+'HH:mm:ss') >= reservationTime && nowThailand.format('YYYY-MM-DD'+'T'+'HH:mm:ss') <= endTime) {
-          updateRoomStatus(roomdetail_id, 0);
-        } else {
-          updateRoomStatus(roomdetail_id, 1);
-        }
-      });
-    });
-  }
+//         if (nowThailand.format('YYYY-MM-DD'+'T'+'HH:mm:ss') >= reservationTime && nowThailand.format('YYYY-MM-DD'+'T'+'HH:mm:ss') <= endTime) {
+//           updateRoomStatus(roomdetail_id, 0);
+//         } else {
+//           updateRoomStatus(roomdetail_id, 1);
+//         }
+//       });
+//     });
+//   }
 
-  app.put('/update-room-status', (req, res) => {
-    compareAndUpdateRoomStatus();
-    res.status(200).json({ status: 'ok' });
-  });
+//   app.put('/update-room-status', (req, res) => {
+//     compareAndUpdateRoomStatus();
+//     res.status(200).json({ status: 'ok' });
+//   });
   
 // API endpoint สำหรับอัปเดต status_room จากฐานข้อมูล reservation--------------------------------------------------------------------
 
@@ -839,8 +866,8 @@ app.post('/roomdetail',jsonParser, (req, res) => {
 
 //setInterval------------------------------------------------------------------------------------------------------------------------
 const updateInterval = 5 * 60 * 1000; // 5 นาทีในมิลลิวินาที
-setInterval(compareAndUpdateRoomStatus, updateInterval);
-compareAndUpdateRoomStatus();
+// setInterval(compareAndUpdateRoomStatus, updateInterval);
+// compareAndUpdateRoomStatus();
 //setInterval------------------------------------------------------------------------------------------------------------------------
 app.listen(3000, function () {
     console.log('CORS-enabled web server listening on port 3000')
