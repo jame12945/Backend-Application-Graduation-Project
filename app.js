@@ -299,11 +299,10 @@ app.post('/appreserveroom/:roomdetail_id', jsonParser, async function (req, res)
         const endTime = req.body.end_time;
         const dateReserve = req.body.date_reservation;
         const updateReserve = req.body.update_reservlog;
-        //add
         const attendeesEmailData =  JSON.stringify(req.body.attendee_email);
         const roomDetailData = await getRoomDetail(roomDetail);
         const roomIsAvailable = await isRoomAvailable(roomDetail, dateReserve, startTime, endTime);
-        //add log
+       
         console.log('body from flutter = '+ JSON.stringify(req.body));
         if (roomIsAvailable) {
             if (roomDetailData) {
@@ -543,6 +542,49 @@ function addEmail(email) {
 //         res.json({ status: 'error', message: err.message });
 //     }
 // })
+//GetTimeStatus----------------------------------------------------------------------------------------------------------------------------------------------------------------
+app.get('/selectStatusTime', function (req, res) {
+    try {
+        const currentTime = new Date();
+        const formattedCurrentDate = currentTime.toISOString().split('T')[0]; // ดึงวันที่ปัจจุบัน
+
+        connection.execute(
+            'SELECT start_time, end_time FROM reservation WHERE roomdetail_id = 9 AND DATE(date_reservation) = ?',
+            [formattedCurrentDate],
+            function (err, results) {
+                if (err) {
+                    res.json({ status: 'error', message: err });
+                    return;
+                }
+
+                const formattedCurrentTime = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                // กรองข้อมูล start_time และ end_time ที่ถูกจองในขณะนี้
+                const filteredTimes = results.filter(timeSlot => {
+                    return formattedCurrentTime >= timeSlot.start_time && formattedCurrentTime <= timeSlot.end_time;
+                });
+
+                // เรียงลำดับตาม start_time
+                filteredTimes.sort((a, b) => {
+                    return a.start_time.localeCompare(b.start_time);
+                });
+
+                // เลือกรายการที่ start_time เป็นตัวแรก
+                const finalResult = filteredTimes.length > 0 ? [filteredTimes[0]] : [];
+
+                res.json({ status: 'ok', message: finalResult, time: formattedCurrentTime });
+                return;
+            }
+        );
+    } catch (err) {
+        console.log('ข้อผิดพลาด:', err);
+        res.json({ status: 'error', message: err.message });
+    }
+});
+
+
+
+//GetTimeStatus----------------------------------------------------------------------------------------------------------------------------------------------------------------
 // ReservationApplication-------------------------------------------------------------------------------------------------------------------
 
 // ฟังก์ชันสำหรับดึงข้อมูล user_username จากตาราง user_insystem โดยใช้ name
