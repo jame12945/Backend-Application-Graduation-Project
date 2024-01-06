@@ -584,7 +584,78 @@ app.get('/selectStatusTime', function (req, res) {
 
 
 
-//GetTimeStatus----------------------------------------------------------------------------------------------------------------------------------------------------------------
+//GetNextTimeStatus----------------------------------------------------------------------------------------------------------------------------------------------------------------
+app.get('/selectNextBooking', function (req, res) {
+    try {
+        const currentTime = new Date();
+        const formattedCurrentDate = currentTime.toISOString().split('T')[0]; // ดึงวันที่ปัจจุบัน
+
+        connection.execute(
+            'SELECT start_time, end_time, user_id FROM reservation WHERE roomdetail_id = 9 AND DATE(date_reservation) = ?',
+            [formattedCurrentDate],
+            function (err, results) {
+                if (err) {
+                    res.json({ status: 'error', message: err });
+                    return;
+                }
+
+                const formattedCurrentTime = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                // กรองข้อมูล start_time ที่ถูกจองหลังจากเวลาปัจจุบัน
+                const filteredTimes = results.filter(timeSlot => {
+                    return formattedCurrentTime < timeSlot.start_time;
+                });
+
+                // เรียงลำดับตาม start_time
+                filteredTimes.sort((a, b) => {
+                    return a.start_time.localeCompare(b.start_time);
+                });
+
+                // เลือกรายการที่ start_time เป็นตัวแรก
+                const finalResult = filteredTimes.length > 0 ? filteredTimes.slice(0, 2) : [];
+                // ดึงข้อมูลผู้ใช้จากตาราง user_insystem
+                const userPromises = finalResult.map(timeSlot => {
+                    return new Promise((resolve, reject) => {
+                        connection.execute(
+                            'SELECT user_fname, user_lname FROM user_insystem WHERE user_id = ?',
+                            [timeSlot.user_id],
+                            (err, userResults) => {
+                                if (err) {
+                                    reject(err);
+                                } else {
+                                    resolve(userResults[0]);
+                                }
+                            }
+                        );
+                    });
+                });
+
+                // รอให้ทุกรายการ userPromises ดึงข้อมูลผู้ใช้เสร็จ
+                Promise.all(userPromises)
+                    .then(userDetails => {
+                        // เพิ่มข้อมูลผู้ใช้ลงใน finalResult
+                        finalResult.forEach((timeSlot, index) => {
+                            timeSlot.user_details = userDetails[index];
+                        });
+
+                        // ส่งผลลัพธ์ JSON
+                        res.json({ status: 'ok', message: finalResult, time: formattedCurrentTime });
+                    })
+                    .catch(err => {
+                        console.log('ข้อผิดพลาดในการดึงข้อมูลผู้ใช้:', err);
+                        res.json({ status: 'error', message: err.message });
+                    });
+                            }
+                        );
+    } catch (err) {
+        console.log('ข้อผิดพลาด:', err);
+        res.json({ status: 'error', message: err.message });
+    }
+});
+
+
+
+//GetNextTimeStatus----------------------------------------------------------------------------------------------------------------------------------------------------------------
 // ReservationApplication-------------------------------------------------------------------------------------------------------------------
 
 // ฟังก์ชันสำหรับดึงข้อมูล user_username จากตาราง user_insystem โดยใช้ name
