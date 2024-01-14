@@ -652,7 +652,37 @@ app.get('/selectNextBooking', function (req, res) {
         res.json({ status: 'error', message: err.message });
     }
 });
+//GetAllRoom9Reservation----------------------------------------------------------------------------------------------------------------------------------------------------------------
+app.get('/selectAllRoomBooking', function (req, res) {
+  try{
+    const currentTime = new Date();
+    const formattedCurrentDate = currentTime.toISOString().split('T')[0]; 
+   connection.execute(
+    'SELECT *  FROM reservation WHERE roomdetail_id = 9 AND DATE(date_reservation) >= ?',
+    [formattedCurrentDate],
+    function (err, result) {
+      if(err) {
+             res.json({ status: 'error', message: err.message });
+             return
+      }
+      else{
+            res.json({ status: 'ok', message: 'all Email' , resultData: result});
+        return
+      }
+    }
+   )
+  }
+  catch(err) {
+    console.log('Error',err);
+    res.json({ status: 'error', message: err.message });
+  }
+ 
 
+});
+
+
+
+//GetAllRoom9Reservation----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 //GetNextTimeStatus----------------------------------------------------------------------------------------------------------------------------------------------------------------
