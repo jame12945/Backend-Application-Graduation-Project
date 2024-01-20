@@ -534,7 +534,112 @@ async function updateReservationUserId(reservationId, userUsername) {
     }
   });
 }
+app.post("/passAttendeeToBookingByface", jsonParser, async function (req, res) {
+  try {
+    const nameFromFaceRecognition = req.body.nameFromFaceRecognition;
+    console.log("Received name from Flutter:", nameFromFaceRecognition);
+    const userInSystemData = await getUseremailFromUserfname(
+      nameFromFaceRecognition
+    );
+    console.log(userInSystemData);
+    if (userInSystemData) {
+      const checkBookingFromUserEmail = userInSystemData.user_email;
+      const resultCompare =
+        await compareBookingWithStartTimeEndTimeWithAttendeeEmail(
+          checkBookingFromUserEmail
+        );
+      console.log(resultCompare);
+      res.json({
+        status: "ok",
+        message: "Face recognition successful, and  user can get into the room",
+        data: resultCompare,
+      });
+    } else {
+      res.json({
+        status: "error",
+        message:
+          "No user found with the provided name from face recognition thaat depend on booking",
+      });
+    }
+  } catch (err) {
+    console.log("ข้อผิดพลาด:", err);
+    res.json({ status: "error", message: err.message });
+  }
+});
 
+async function getUseremailFromUserfname(name) {
+  return new Promise((resolve, reject) => {
+    connection.execute(
+      'SELECT * FROM user_insystem WHERE CONCAT(user_fname, " ", user_lname) LIKE ?',
+      [`%${name}%`],
+      (err, results, fields) => {
+        if (err) {
+          reject(err);
+        } else {
+          if (results.length > 0) {
+            resolve({ user_email: results[0].user_email });
+          } else {
+            resolve(null); // ถ้าไม่พบ user_id
+          }
+        }
+      }
+    );
+  });
+}
+
+async function compareBookingWithStartTimeEndTimeWithAttendeeEmail(
+  checkBookingFromUseremail
+) {
+  return new Promise((resolve, reject) => {
+    const currentTime = new Date();
+    const options = { year: "numeric", month: "2-digit", day: "2-digit" };
+    const formattedCurrentDate = currentTime.toLocaleDateString(
+      "en-GB",
+      options
+    );
+
+    const currentTimeString = currentTime.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+    console.log("currentTimeString.................");
+    console.log(currentTimeString);
+    connection.execute(
+      "SELECT * FROM reservation WHERE JSON_CONTAINS(attendee_email, JSON_ARRAY(?)) AND DATE_FORMAT(date_reservation, '%d/%m/%Y') = ?",
+      [checkBookingFromUseremail, formattedCurrentDate],
+      (err, results, fields) => {
+        if (err) {
+          reject(err);
+        } else {
+          if (results) {
+            const currentTimeDecimal = parseFloat(
+              currentTimeString.replace(":", ".")
+            );
+
+            const bookingsInTimeRange = results.filter((booking) => {
+              const startTimeDecimal = parseFloat(
+                booking.start_time.replace(":", ".")
+              );
+              const endTimeDecimal = parseFloat(
+                booking.end_time.replace(":", ".")
+              );
+
+              return (
+                currentTimeDecimal >= startTimeDecimal &&
+                currentTimeDecimal <= endTimeDecimal
+              );
+            });
+
+            resolve(bookingsInTimeRange);
+          } else {
+            resolve(null);
+          }
+        }
+      }
+    );
+  });
+}
 app.post("/passBookingReserveByFace", jsonParser, async function (req, res) {
   try {
     const nameFromFaceRecognition = req.body.nameFromFaceRecognition;
@@ -818,8 +923,6 @@ app.get("/selectNextBooking", function (req, res) {
       "en-GB",
       options
     );
-    console.log("================================");
-    console.log(formattedCurrentDate);
 
     connection.execute(
       "SELECT start_time, end_time, user_id FROM reservation WHERE roomdetail_id = 9 AND  DATE_FORMAT(date_reservation, '%d/%m/%Y') = ?",
